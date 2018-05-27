@@ -1,189 +1,305 @@
-# udacity-linux-server-configuration
+# Linux Server Configuration
 
-This is the final project for "Full Stack Web Developer Nanodegree" on Udacity. 
+### Project Overview
+> A baseline installation of a Linux server and preparing it to host our web applications, 
+securing it from a number of attack vectors, installing and configuring a database server, and deploying 
+our one of your existing web applications onto it.
 
-In this project, a Linux virtual machine needs to be configurated to support the Item Catalog website.
+### Why this Project?
+> This Project provides deep understanding of exactly what our web applications are doing, 
+how they are hosted, and interats with multiple systems. In this Project, we will  turn a brand-new, 
+bare bones, Linux server into the secure and efficient web application host needed by Our Applications.
 
-You can visit http://35.164.53.24/ for the website deployed.
+#### Link to Project: [ItemCatalog](http://bit.do/book_catalog)
 
-## You may refer this Udacity course
+* **Public IP Address:** 34.214.112.187
+* **Accessible SSH port:** 2200
 
-1. https://www.udacity.com/course/configuring-linux-web-servers--ud299
-
-## Instructions for SSH access to the instance
-
-1. Download Private Key from the __SSH keys__ section in the __Account__ section on Amazon Lightsail.
-2. Move the private key file into the folder `~/.ssh` (where ~ is your environment's home directory). So if you downloaded the file to the Downloads folder, just execute the following command in your terminal.
-	```mv ~/Downloads/Lightsail-key.pem ~/.ssh/```
-3. Open your terminal and type in
-	```chmod 400 ~/.ssh/Lightsail-key.pem```
-4. In your terminal, type in
-	```ssh -i ~/.ssh/Lightsail-key.pem ubunut@35.164.53.24```
-
-## Create a new user named grader
-
-1. `sudo adduser grader`
-2. `sudo vi /etc/sudoers`
-3. `sudo touch /etc/sudoers.d/grader`
-4. `sudo vi /etc/sudoers.d/grader`, type in `grader ALL=(ALL:ALL) NOPASSWD:ALL`, save and quit
-
-## Set ssh login using keys
-
-1. Generate keys on local machine using`ssh-keygen` ; then save the private key in `~/.ssh` on local machine
-2. Deploy public key on developement enviroment
-
-	On you virtual machine:
-	```
-	$ su - grader
-	$ mkdir .ssh
-	$ touch .ssh/authorized_keys
-	$ vi .ssh/authorized_keys
-	```
-	Copy the public key (_one with the extension .pub_) generated on your local machine to this file and save
+## Steps to Configure Linux server
+#### 1. Create Development Environment Instance
+  * [Create new development environment here.](https://www.udacity.com/account#!/development_environment)
+  * Download private key provided and note down your public IP address.
   
-	```
-	$ chmod 700 .ssh
-	$ chmod 644 .ssh/authorized_keys
-	```
-	
-3. reload SSH using `service ssh restart`
-4. now you can use ssh to login with the new user you created
+#### 2. Launch VM and access SSH to the instance
+  * Move the private key file into the folder ~/.ssh (where ~ is your environment's home directory).
+  
+  ```
+    $ mv /(current_private_key_address)/udacity_key.rsa ~/.ssh/
+  ```
+  * Change the key permission so that only owner can read and write
+  
+  ```
+    $ chmod 600 ~/.ssh/udacity_key.rsa
+  ```
+  * SSH into the instance
+  
+  ```
+    $ ssh -i ~/.ssh/udacity_key.rsa root@public_IP_address
+   ```
+   
+#### 3. Create New User
+  
+  * Add User grader
+  
+  ```
+    $ sudo adduser grader
+  ```
+  * Give Sudo Access to grader
+  
+  ```
+    $ sudo nano /etc/sudoers.d/grader
+  ```
+  * Add following line to this file
+  
+  ```
+    grader ALL=(ALL:ALL) ALL
+  ```
+  * To prevent the "sudo: unable to resolve host" error
+  
+   i. Edit the hosts file:
+   
+   ```
+     $ sudo nano /etc/hosts
+   ```
+   ii. Add the host:
+   
+   ```
+     $ 127.0.1.1 ip-XX-XX-XX-XX
+   ```
 
-	`ssh -i ~/.ssh/[privateKeyFilename] grader@35.164.53.24`
+#### 4. Configure the key-based authentication for grader user
+  *  Generate an encryption key on your local machine
+  
+   i. Go to the directory where you want to save the Key, and run the following command:
+   
+   ```
+    $ ssh-keygen -t rsa
+   ```
+      followed by the name of the key. By default, the keys will be stored in the ~/.ssh directory within your user's 
+      home directory.
+      
+   ii. Place the public key on the server that we want to use:
+   
+   ```
+    $ ssh-copy-id grader@XX.XX.XX.XX -i (key_name.pub)
+   ```
+   iii. Log into remote VM as root user and open the following file:
+   
+   ```
+    $ cat /.ssh/authorized_keys
+   ```
+      and copy it's content using `$ nano /home/grader/.ssh/authorized_keys`
+  
+  Now we can log into the remote VM through ssh with the following command: 
+  
+  ```
+   $ ssh -i udacity_key.rsa grader@XX.XX.XX.XX 
+  ```
 
-## Update all currently installed packages
+#### 5. Enforce key-based authentication
+  * Run `$ sudo nano /etc/ssh/sshd_config`.
+  * Find the **PasswordAuthentication** line and edit it to no.
+  * Save the file.
+  * Run `$ sudo service ssh restart` to restart the service.
 
-	sudo apt-get update
-	sudo apt-get upgrade
+#### 6. Change the SSH port from 22 to 2200
+  * Find the **Port line** in the same file above, i.e */etc/ssh/sshd_config* and edit it to 2200.
+  * Save the file.
+  * Run `$ sudo service ssh restart` to restart the service.
+  
+#### 7. Disable login for root user
+  * Find the **PermitRootLogin** line in the same file above, i.e */etc/ssh/sshd_config* and edit it to no.
+  * Save the file.
+  * Run `$ sudo service ssh restart` to restart the service.
 
-## Change the SSH port from 22 to 2200
+Now we can login into remote VM through SSH with following command:
+```
+ $ ssh -i ~/.ssh/udacity_key.rsa grader@XX.XX.XX.XX -p 2200
+```
 
-1. Use `sudo vi /etc/ssh/sshd_config` and then change Port 22 to Port 2200 , save & quit.
-2. Reload SSH using `sudo service ssh restart`
+Source: [Ubuntu forums](http://ubuntuforums.org/showthread.php?t=1739013)
 
-__Note:__ Remember to add and save port 2200 with _Application __as__ Custom and Protocol __as__ TCP_ in the Networking section of your instance on Amazon Lightsail. 
+#### 8. Configure local timezone to UTC
+  * Change the timezone to UTC using following command: `$ sudo timedatectl set-timezone UTC`.
+  * You can also open time configuration dialog and set it to UTC with: `$ sudo dpkg-reconfigure tzdata`.
+  * Install ntp daemon ntpd for a better synchronization of the server's time over the network connection:
+  
+  ```
+   $ sudo apt-get install ntp
+  ```
+ Source: [UbuntuTime](https://help.ubuntu.com/community/UbuntuTime)
 
-## Configure the Uncomplicated Firewall (UFW)
+#### 9. Update all currently installed packages
+  * `$ sudo apt-get update`.
+  * `$ sudo apt-get upgrade`.
 
-Configure the Uncomplicated Firewall (UFW) to only allow incoming connections for SSH (port 2200), HTTP (port 80), and NTP (port 123)
+#### 10. Configure the Uncomplicated Firewall (UFW)
+  ```
+   $ sudo ufw default deny incoming
+   $ sudo ufw default allow outgoing
+   $ sudo ufw allow 2200/tcp
+   $ sudo ufw allow www
+   $ sudo ufw allow ntp
+   $ sudo ufw enable
+  ```
 
-	sudo ufw allow ssh
-  	sudo ufw allow www
-  	sudo ufw allow ntp
-  	sudo ufw allow 2200/tcp
-	sudo ufw allow 80/tcp
-	sudo ufw allow 123/udp
-	sudo ufw enable 
-  	sudo ufw status
+#### 11. Configure cron scripts to automatically manage package updates
+  * Install unattended-upgrades if not already installed using command:
+  
+  ```
+   $ sudo apt-get install unattended-upgrades
+  ```
+  * Enable it using command:
+  
+  ```
+   $ sudo dpkg-reconfigure --priority=low unattended-upgrades
+  ```
+
+#### 12. Install and Configure Apache2, mod-wsgi and Git
+ ```
+  $ sudo apt-get install apache2 libapache2-mod-wsgi git
+ ```
+ * Enable mod_wsgi:
  
-## Configure the local timezone to UTC
+ ```
+  $ sudo a2enmod wsgi
+ ```
 
-1. Configure the time zone `sudo dpkg-reconfigure tzdata`
-2. It is already set to UTC.
+#### 13. Install and configure PostgreSQL
+  * Installing PostgreSQL Python dependencies:
+  
+  ```
+   $ sudo apt-get install libpq-dev python-dev
+  ```
+  * Installing PostgreSQL:
 
-## Install and configure Apache to serve a Python mod_wsgi application
+   ```
+     $ sudo apt-get install postgresql postgresql-contrib
+   ```
+  * Check if no remote connections are allowed :
 
-1. Install Apache `sudo apt-get install apache2`
-2. Install mod_wsgi `sudo apt-get install python-setuptools libapache2-mod-wsgi`
-3. Restart Apache `sudo service apache2 restart`
+   ```
+     $ sudo cat /etc/postgresql/9.3/main/pg_hba.conf
+   ```
+   
+  * Login as *postgres* User (Default User), and get into PostgreSQL shell:
 
-## Install and configure PostgreSQL
+   ```
+     $ sudo su - postgres
+     $ psql
+   ```
+    * Create a new User named *catalog*:  `# CREATE USER catalog WITH PASSWORD 'password';`
+    * Create a new DB named *catalog*: `# CREATE DATABASE catalog WITH OWNER catalog;`
+    * Connect to the database *catalog* : `# \c catalog`
+    * Revoke all rights: `# REVOKE ALL ON SCHEMA public FROM public;`
+    * Lock down the permissions only to user *catalog*: `# GRANT ALL ON SCHEMA public TO catalog;`
+    * Log out from PostgreSQL: `# \q`. Then return to the *grader* user: `$ exit`
 
-1. Install PostgreSQL `sudo apt-get install postgresql`
-2. Check if no remote connections are allowed `sudo vi /etc/postgresql/9.3/main/pg_hba.conf`
-3. Login as user "postgres" `sudo su - postgres`
-4. Get into postgreSQL shell `psql`
-5. Create a new database named catalog  and create a new user named catalog in postgreSQL shell
-	
-	```
-	postgres=# CREATE DATABASE catalog;
-	postgres=# CREATE USER catalog;
-	```
-5. Set a password for user catalog
-	
-	```
-	postgres=# ALTER ROLE catalog WITH PASSWORD 'password';
-	```
-6. Give user "catalog" permission to "catalog" application database
-	
-	```
-	postgres=# GRANT ALL PRIVILEGES ON DATABASE catalog TO catalog;
-	```
-7. Quit postgreSQL `postgres=# \q`
-8. Exit from user "postgres" 
-	
-	```
-	exit
-	```
- 
-## Install git, clone and setup your Catalog App project.
-1. Install Git using `sudo apt-get install git`
-2. Use `cd /var/www` to move to the /var/www directory 
-3. Create the application directory `sudo mkdir FlaskApp`
-4. Move inside this directory using `cd FlaskApp`
-5. Clone the Catalog App to the virtual machine `git clone https://github.com/Akash187/Item-Catalog.git`
-6. Rename the project's name `sudo mv ./Item-Catalog ./FlaskApp`
-7. Move to the inner FlaskApp directory using `cd FlaskApp`
-8. Rename `server.py` to `__init__.py` using `sudo mv website.py __init__.py`, if `__init__.py` not present.
-9. Edit `database_setup.py` and `fill_catalog.py` to change `engine = create_engine('sqlite:///catalog.db')` to `engine = create_engine('postgresql://catalog:password@localhost/catalog')`, if not already done.
-10. Install pip `sudo apt-get install python-pip`
-11. Use pip to install dependencies -
-	* `sudo pip install sqlalchemy flask-sqlalchemy psycopg2 bleach requests`
-	* `sudo pip install flask packaging oauth2client redis passlib flask-httpauth`
-13. Install psycopg2 `sudo apt-get -qqy install postgresql python-psycopg2`
-14. Create database schema `sudo python database_setup.py`
-15. Fill database `sudo pip install fill_catalog.py`
+  * Inside the Flask application, the database connection is now performed with:
+   
+   ```
+   engine = create_engine('postgresql://catalog:yourPassword@localhost/catalog')
+   ```
+
+#### 14. Install Flask and other dependencies
+
+```
+    $ sudo apt-get install python-pip
+    $ sudo pip install Flask
+    $ sudo pip install httplib2 oauth2client sqlalchemy psycopg2 sqlalchemy_utils
+    $ sudo pip install requests
+  ```
+Source: [Flask Documentation](http://flask.pocoo.org/docs/0.12/installation/)
+
+#### 15. Clone the Catalog app from Github
+
+  * Make a *catalog* named directory in */var/www*
+
+    ```
+      $ sudo mkdir /var/www/catalog
+    ```
+
+  * Change the owner of the directory *catalog*
+
+    ```
+     $ sudo chown -R grader:grader /var/www/catalog
+    ```
+
+  * Clone the **bookCatalog** to the catalog directory:
+
+    ```
+     $ git clone https://github.com/Akash187/Item-Catalog.git catalog
+    ```
+
+  * Change the branch of repo **bookCatalog**  to **deployment**:
+
+    ```
+     $ cd catalog && git checkout deployment
+    ```
+
+  * Make a bookCatalog.wsgi file to serve the application over the mod_wsgi. with content:
+
+    ```
+     $ touch bookCatalog.wsgi && nano bookCatalog.wsgi
+    ```
+
+    ```
+    import sys
+    import logging
+    logging.basicConfig(stream=sys.stderr)
+    sys.path.insert(0, "/var/www/catalog/")
+
+    from bookCatalog import app as application
+    ```
+  * Inside *bookCatalog.py*  database connection is now performed with:
+
+    ```
+     engine = create_engine('postgresql://catalog:password@localhost/catalog')
+    ```
+  * Run the database_setup.py and dummyBooks.py once to setup database with dummy data:
+  
+  ```
+   $ python database_setup.py
+   $ python dummybooks.py
+  ```
+
+#### 16. Edit the default Virtual File with following content:
+
+  ```
+    $  sudo nano /etc/apache2/sites-available/000-default.conf
+  ```
 
 
-## Configure and Enable a New Virtual Host
-1. Create FlaskApp.conf to edit: `sudo vi /etc/apache2/sites-available/FlaskApp.conf`
-2. Add the following lines of code to the file to configure the virtual host. 
-	
-	```
-	<VirtualHost *:80>
-		ServerName fill_catalog.py
-		ServerAdmin vks18765@gmail.com
-		WSGIScriptAlias / /var/www/FlaskApp/flaskapp.wsgi
-		<Directory /var/www/FlaskApp/FlaskApp/>
-			Order allow,deny
-			Allow from all
-		</Directory>
-		Alias /static /var/www/FlaskApp/FlaskApp/static
-		<Directory /var/www/FlaskApp/FlaskApp/static/>
-			Order allow,deny
-			Allow from all
-		</Directory>
-		ErrorLog ${APACHE_LOG_DIR}/error.log
-		LogLevel warn
-		CustomLog ${APACHE_LOG_DIR}/access.log combined
-	</VirtualHost>
-	```
-3. Enable the virtual host with the following command: `sudo a2ensite FlaskApp`
+  ```
+  <VirtualHost *:80>
+    ServerName XX.XX.XX.XX
+    ServerAdmin vks18765@gmail.com
+    WSGIScriptAlias / /var/www/catalog/bookCatalog.wsgi
+    <Directory /var/www/catalog/>
+        Order allow,deny
+        Allow from all
+    </Directory>
+    Alias /static /var/www/catalog/static
+    <Directory /var/www/catalog/static/>
+        Order allow,deny
+        Allow from all
+    </Directory>
+  </VirtualHost>
+  ```
+Source: [Digital Ocean](https://www.digitalocean.com/community/tutorials/how-to-set-up-apache-virtual-hosts-on-ubuntu-14-04-lts)
 
-## Create the .wsgi File
-1. Create the .wsgi File under /var/www/FlaskApp: 
-	
-	```
-	cd /var/www/FlaskApp
-	sudo vi flaskapp.wsgi 
-	```
-2. Add the following lines of code to the flaskapp.wsgi file:
-	
-	```
-	#!/usr/bin/python
-	import sys
-	import logging
-	logging.basicConfig(stream=sys.stderr)
-	sys.path.insert(0,"/var/www/FlaskApp/")
+#### 17. Restart Apache to launch the app
 
-	from FlaskApp import app as application
-	application.secret_key = 'super_secret_key'
-	```
+   ```
+    $ sudo service apache2 restart
+   ```
 
-## Restart Apache
-1. Restart Apache `sudo service apache2 restart `
 
-## References:
-1. Udacity's FSND Forum
-2. https://www.digitalocean.com/community/tutorials/how-to-deploy-a-flask-application-on-an-ubuntu-vps
-3. https://www.digitalocean.com/community/tutorials/how-to-secure-postgresql-on-an-ubuntu-vps
+
+
+
+
+
+
+
+
